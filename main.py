@@ -12,9 +12,11 @@ from pathlib import Path
 
 load_dotenv()
 
+uploads_path = Path(os.getenv('ATTACHMENTS_PATH'))
+
 if os.getenv('DOWNLOAD_ATTACHMENTS') == 'TRUE':
     try:
-        os.mkdir(os.getenv('ATTACHMENTS_PATH'))
+        os.mkdir(uploads_path)
     except OSError as error:
         pass
 
@@ -34,9 +36,6 @@ async def on_ready():
         f'{guild.name}(id: {guild.id})'
     )
 
-    members = '\n - '.join([member.name for member in guild.members])
-    print(f'Guild Members:\n - {members}')
-
 @client.event
 async def on_message(message):
     print(message)
@@ -45,12 +44,12 @@ async def on_message(message):
     metadata = MetaData(engine)
     metadata.reflect(bind=engine)
 
-    if not engine.dialect.has_table(engine.connect(), f'channel_{message.channel.name}'):  # If table don't exist, Create.
-        # Create a table with the appropriate Columns
-        Table(f'channel_{message.channel.name}', metadata,
+    if not engine.dialect.has_table(engine.connect(), f'channel_{message.channel.name}_{message.channel.id}'):  # If table don't exist, Create.
+        Table(f'channel_{message.channel.name}_{message.channel.id}', metadata,
               Column('id', BigInteger, primary_key=True, nullable=False),
               Column('date', DateTime),
-              Column('channel', String),
+              Column('channel_id', String),
+              Column('channel_name', String),
               Column('author_id', BigInteger),
               Column('author_name', String),
               Column('author_discriminator', String),
@@ -58,17 +57,17 @@ async def on_message(message):
               Column('message_content', String),
               Column('message_attachments', String),
               )
-              # Implement the creation
         metadata.create_all()
 
-    tbl = metadata.tables[f'channel_{message.channel.name}']
+    tbl = metadata.tables[f'channel_{message.channel.name}_{message.channel.id}']
 
     attachments = [{'id': x.id, 'filename': x.filename, 'url': x.url} for x in list(message.attachments)]
 
     stmt = insert(tbl).values(
         id=message.id,
         date=datetime.now(),
-        channel=message.channel.name,
+        channel_id=message.channel.id,
+        channel_name=message.channel.name,
         author_id=message.author.id,
         author_name=message.author.name,
         author_discriminator=message.author.discriminator,
@@ -79,10 +78,15 @@ async def on_message(message):
     connection.execute(stmt)
 
     if os.getenv('DOWNLOAD_ATTACHMENTS') == 'TRUE':
+        try:
+            os.mkdir(uploads_path / f'channel_{message.channel.name}_{message.channel.id}')
+        except OSError as error:
+            pass
+
         for attachment in attachments:
             channel_name = message.channel.name
             req = requests.get(attachment['url'], allow_redirects=True)
-            filepath = Path(os.getenv('ATTACHMENTS_PATH')) / f'{attachment["id"]}_{channel_name}_{attachment["filename"]}'
+            filepath = uploads_path / f'channel_{message.channel.name}_{message.channel.id}' / f'{attachment["id"]}_{channel_name}_{attachment["filename"]}'
             open(filepath, 'wb').write(req.content)
 
 client.run(TOKEN)
