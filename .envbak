@@ -1,0 +1,4 @@
+#copy and rename to .env
+
+# https://discord.com/developers/applications
+DISCORD_TOKEN={your-bot-token}
