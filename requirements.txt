@@ -1,3 +1,4 @@
 sqlalchemy
 discord
 python-dotenv
+requests
