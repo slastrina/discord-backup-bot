@@ -20,7 +20,7 @@ if os.getenv('DOWNLOAD_ATTACHMENTS') == 'TRUE':
     except OSError as error:
         pass
 
-engine = db.create_engine('sqlite:///bot.db', echo=False)
+engine = db.create_engine(os.getenv('DB_CONNECTION_STRING'), echo=False)
 connection = engine.connect()
 
 TOKEN = os.getenv('DISCORD_TOKEN')

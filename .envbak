@@ -6,3 +6,5 @@ DISCORD_GUILD={your-guild-name}
 
 DOWNLOAD_ATTACHMENTS=TRUE
 ATTACHMENTS_PATH=./uploads
+
+DB_CONNECTION_STRING=sqlite:///bot.db
