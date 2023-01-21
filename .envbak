@@ -2,7 +2,7 @@
 
 # https://discord.com/developers/applications
 DISCORD_TOKEN={your-bot-token}
-DISCORD_GUILD={your-guild-name}
+DISCORD_GUILD=Guild1,Guild2,Guild3
 
 DOWNLOAD_ATTACHMENTS=TRUE
 ATTACHMENTS_PATH=./data/uploads
