@@ -29,6 +29,7 @@ connection = engine.connect()
 metadata = MetaData()
 
 TOKEN = os.getenv('DISCORD_TOKEN')
+GUILDS = os.getenv('DISCORD_GUILD').split(',')
 
 intent = discord.Intents.default()
 intent.members = True
@@ -44,7 +45,7 @@ async def on_ready():
 
 @client.event
 async def on_message(message):
-    if message.guild.name in os.getenv('DISCORD_GUILD'):
+    if message.guild.name in GUILDS:
 
         print(message)
 
