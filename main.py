@@ -62,7 +62,8 @@ async def on_message(message):
                   Column('id', BigInteger, primary_key=True, nullable=False),
                   Column('date', DateTime),
                   Column('guild', String),
-                  Column('parent', String),
+                  Column('container', String),
+                  Column('parent_name', String),
                   Column('channel_id', String),
                   Column('channel_name', String),
                   Column('author_id', BigInteger),
@@ -82,7 +83,8 @@ async def on_message(message):
             id=message.id,
             date=datetime.now(),
             guild=str(message.guild.name),
-            parent=parent,
+            container='Thread/Forum' if is_forum else 'channel',
+            parent_name=parent,
             channel_id=message.channel.id,
             channel_name=message.channel.name,
             author_id=message.author.id,
@@ -93,8 +95,6 @@ async def on_message(message):
             message_attachments=json.dumps(attachments)
         )
         connection.execute(stmt)
-
-        print(len(attachments))
 
         if os.getenv('DOWNLOAD_ATTACHMENTS') == 'TRUE':
             if len(attachments):
