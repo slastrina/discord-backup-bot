@@ -50,7 +50,9 @@ async def on_message(message):
 
         metadata.reflect(connection)
 
-        parent = str(message.channel.parent) if "parent" in dir(message.channel) else None
+        is_forum = "parent" in dir(message.channel)
+
+        parent = str(message.channel.parent) if is_forum else None
 
         table_name = f'{message.guild.name}_{parent or message.channel.name}'
 
@@ -93,14 +95,21 @@ async def on_message(message):
 
         if os.getenv('DOWNLOAD_ATTACHMENTS') == 'TRUE':
             try:
-                os.mkdir(uploads_path / f'channel_{message.channel.name}_{message.channel.id}')
+                if is_forum:
+                    os.makedirs(uploads_path / table_name / f'{message.channel.name}')
+                else:
+                    os.makedirs(uploads_path / table_name)
             except OSError as error:
-                print(error)
+                if 'File exists' not in str(error):
+                    print(error)
 
             for attachment in attachments:
-                channel_name = message.channel.name
                 req = requests.get(attachment['url'], allow_redirects=True)
-                filepath = uploads_path / f'channel_{message.channel.name}_{message.channel.id}' / f'{attachment["id"]}_{channel_name}_{attachment["filename"]}'
+                if is_forum:
+                    filepath = uploads_path / f'{table_name}' / f'{message.channel.name}' / f'({attachment["id"]}){attachment["filename"]}'
+                else:
+                    filepath = uploads_path / f'{table_name}' / f'({attachment["id"]}){attachment["filename"]}'
+
                 open(filepath, 'wb').write(req.content)
 
 client.run(TOKEN)
