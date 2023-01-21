@@ -5,6 +5,6 @@ DISCORD_TOKEN={your-bot-token}
 DISCORD_GUILD={your-guild-name}
 
 DOWNLOAD_ATTACHMENTS=TRUE
-ATTACHMENTS_PATH=./uploads
+ATTACHMENTS_PATH=./data/uploads
 
-DB_CONNECTION_STRING=sqlite:///bot.db
+DB_CONNECTION_STRING=sqlite:///data/bot.db
