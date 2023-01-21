@@ -12,6 +12,8 @@ from dotenv import load_dotenv
 from sqlalchemy import MetaData, Table, BigInteger, String, DateTime, Column, insert
 from pathlib import Path
 
+from sqlalchemy.ext.automap import automap_base
+
 load_dotenv()
 
 uploads_path = Path(os.getenv('ATTACHMENTS_PATH'))
@@ -24,6 +26,7 @@ if os.getenv('DOWNLOAD_ATTACHMENTS') == 'TRUE':
 
 engine = db.create_engine(os.getenv('DB_CONNECTION_STRING'), echo=False)
 connection = engine.connect()
+metadata = MetaData()
 
 TOKEN = os.getenv('DISCORD_TOKEN')
 
@@ -41,63 +44,63 @@ async def on_ready():
 
 @client.event
 async def on_message(message):
-    print(message)
-    print(message.content)
-    print(message.attachments)
-    metadata = MetaData(engine)
-    metadata.reflect(bind=engine)
+    if message.guild.name in os.getenv('DISCORD_GUILD'):
 
-    parent = str(message.channel.parent) if "parent" in dir(message.channel) else None
+        print(message)
 
-    table_name = f'{message.guild.name}_{parent or message.channel.name}'
+        metadata.reflect(connection)
 
-    if not engine.dialect.has_table(engine.connect(), table_name):  # If table don't exist, Create.
-        Table(table_name, metadata,
-              Column('id', BigInteger, primary_key=True, nullable=False),
-              Column('date', DateTime),
-              Column('guild', String),
-              Column('parent', String),
-              Column('channel_id', String),
-              Column('channel_name', String),
-              Column('author_id', BigInteger),
-              Column('author_name', String),
-              Column('author_discriminator', String),
-              Column('author_nick', String),
-              Column('message_content', String),
-              Column('message_attachments', String),
-              )
-        metadata.create_all()
+        parent = str(message.channel.parent) if "parent" in dir(message.channel) else None
 
-    tbl = metadata.tables[table_name]
+        table_name = f'{message.guild.name}_{parent or message.channel.name}'
 
-    attachments = [{'id': x.id, 'filename': x.filename, 'url': x.url} for x in list(message.attachments)]
+        if not connection.dialect.has_table(engine.connect(), table_name):  # If table don't exist, Create.
+            Table(table_name, metadata,
+                  Column('id', BigInteger, primary_key=True, nullable=False),
+                  Column('date', DateTime),
+                  Column('guild', String),
+                  Column('parent', String),
+                  Column('channel_id', String),
+                  Column('channel_name', String),
+                  Column('author_id', BigInteger),
+                  Column('author_name', String),
+                  Column('author_discriminator', String),
+                  Column('author_nick', String),
+                  Column('message_content', String),
+                  Column('message_attachments', String),
+                  )
+            metadata.create_all(connection)
 
-    stmt = insert(tbl).values(
-        id=message.id,
-        date=datetime.now(),
-        guild=str(message.guild.name),
-        parent=parent,
-        channel_id=message.channel.id,
-        channel_name=message.channel.name,
-        author_id=message.author.id,
-        author_name=message.author.name,
-        author_discriminator=message.author.discriminator,
-        author_nick=message.author.nick,
-        message_content=message.content,
-        message_attachments=json.dumps(attachments)
-    )
-    connection.execute(stmt)
+        tbl = metadata.tables[table_name]
 
-    if os.getenv('DOWNLOAD_ATTACHMENTS') == 'TRUE':
-        try:
-            os.mkdir(uploads_path / f'channel_{message.channel.name}_{message.channel.id}')
-        except OSError as error:
-            pass
+        attachments = [{'id': x.id, 'filename': x.filename, 'url': x.url} for x in list(message.attachments)]
 
-        for attachment in attachments:
-            channel_name = message.channel.name
-            req = requests.get(attachment['url'], allow_redirects=True)
-            filepath = uploads_path / f'channel_{message.channel.name}_{message.channel.id}' / f'{attachment["id"]}_{channel_name}_{attachment["filename"]}'
-            open(filepath, 'wb').write(req.content)
+        stmt = insert(tbl).values(
+            id=message.id,
+            date=datetime.now(),
+            guild=str(message.guild.name),
+            parent=parent,
+            channel_id=message.channel.id,
+            channel_name=message.channel.name,
+            author_id=message.author.id,
+            author_name=message.author.name,
+            author_discriminator=message.author.discriminator,
+            author_nick=message.author.nick,
+            message_content=message.content,
+            message_attachments=json.dumps(attachments)
+        )
+        connection.execute(stmt)
+
+        if os.getenv('DOWNLOAD_ATTACHMENTS') == 'TRUE':
+            try:
+                os.mkdir(uploads_path / f'channel_{message.channel.name}_{message.channel.id}')
+            except OSError as error:
+                pass
+
+            for attachment in attachments:
+                channel_name = message.channel.name
+                req = requests.get(attachment['url'], allow_redirects=True)
+                filepath = uploads_path / f'channel_{message.channel.name}_{message.channel.id}' / f'{attachment["id"]}_{channel_name}_{attachment["filename"]}'
+                open(filepath, 'wb').write(req.content)
 
 client.run(TOKEN)
