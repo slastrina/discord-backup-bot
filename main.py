@@ -16,9 +16,9 @@ uploads_path = Path(os.getenv('ATTACHMENTS_PATH'))
 
 if os.getenv('DOWNLOAD_ATTACHMENTS') == 'TRUE':
     try:
-        os.mkdir(uploads_path)
+        os.makedirs(uploads_path)
     except OSError as error:
-        pass
+        print(error)
 
 engine = db.create_engine(os.getenv('DB_CONNECTION_STRING'), echo=False)
 connection = engine.connect()

@@ -1,6 +1,6 @@
 *.db
 venv/
-uploads/
+data/
 .env
 # Created by .ignore support plugin (hsz.mobi)
 ### Python template
