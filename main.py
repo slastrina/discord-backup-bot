@@ -95,7 +95,7 @@ async def on_message(message):
             try:
                 os.mkdir(uploads_path / f'channel_{message.channel.name}_{message.channel.id}')
             except OSError as error:
-                pass
+                print(error)
 
             for attachment in attachments:
                 channel_name = message.channel.name
