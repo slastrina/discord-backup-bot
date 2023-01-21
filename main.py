@@ -6,6 +6,8 @@ import requests
 import sqlalchemy as db
 
 import discord
+from discord import guild, ChannelType
+from discord.ext import commands
 from dotenv import load_dotenv
 from sqlalchemy import MetaData, Table, BigInteger, String, DateTime, Column, insert
 from pathlib import Path
@@ -26,7 +28,12 @@ connection = engine.connect()
 TOKEN = os.getenv('DISCORD_TOKEN')
 GUILD = os.getenv('DISCORD_GUILD')
 
-client = discord.Client()
+intent = discord.Intents.default()
+intent.members = True
+intent.messages = True
+intent.message_content = True
+
+client = commands.Bot(command_prefix='!', intents = intent)
 
 @client.event
 async def on_ready():
