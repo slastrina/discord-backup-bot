@@ -94,23 +94,26 @@ async def on_message(message):
         )
         connection.execute(stmt)
 
+        print(len(attachments))
+
         if os.getenv('DOWNLOAD_ATTACHMENTS') == 'TRUE':
-            try:
-                if is_forum:
-                    os.makedirs(uploads_path / table_name / f'{message.channel.name}')
-                else:
-                    os.makedirs(uploads_path / table_name)
-            except OSError as error:
-                if 'File exists' not in str(error):
-                    print(error)
+            if len(attachments):
+                try:
+                    if is_forum:
+                        os.makedirs(uploads_path / table_name / f'{message.channel.name}')
+                    else:
+                        os.makedirs(uploads_path / table_name)
+                except OSError as error:
+                    if 'File exists' not in str(error):
+                        print(error)
 
-            for attachment in attachments:
-                req = requests.get(attachment['url'], allow_redirects=True)
-                if is_forum:
-                    filepath = uploads_path / f'{table_name}' / f'{message.channel.name}' / f'({attachment["id"]}){attachment["filename"]}'
-                else:
-                    filepath = uploads_path / f'{table_name}' / f'({attachment["id"]}){attachment["filename"]}'
+                for attachment in attachments:
+                    req = requests.get(attachment['url'], allow_redirects=True)
+                    if is_forum:
+                        filepath = uploads_path / f'{table_name}' / f'{message.channel.name}' / f'({attachment["id"]}){attachment["filename"]}'
+                    else:
+                        filepath = uploads_path / f'{table_name}' / f'({attachment["id"]}){attachment["filename"]}'
 
-                open(filepath, 'wb').write(req.content)
+                    open(filepath, 'wb').write(req.content)
 
 client.run(TOKEN)
