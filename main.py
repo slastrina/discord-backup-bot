@@ -26,7 +26,6 @@ engine = db.create_engine(os.getenv('DB_CONNECTION_STRING'), echo=False)
 connection = engine.connect()
 
 TOKEN = os.getenv('DISCORD_TOKEN')
-GUILD = os.getenv('DISCORD_GUILD')
 
 intent = discord.Intents.default()
 intent.members = True
@@ -37,11 +36,8 @@ client = commands.Bot(command_prefix='!', intents = intent)
 
 @client.event
 async def on_ready():
-    guild = discord.utils.get(client.guilds, name=GUILD)
-    print(
-        f'{client.user} is connected to the following guild:\n'
-        f'{guild.name}(id: {guild.id})'
-    )
+    print(f'We have logged in as {client.user}')
+    print(discord.__version__)
 
 @client.event
 async def on_message(message):
@@ -51,10 +47,16 @@ async def on_message(message):
     metadata = MetaData(engine)
     metadata.reflect(bind=engine)
 
-    if not engine.dialect.has_table(engine.connect(), f'channel_{message.channel.name}_{message.channel.id}'):  # If table don't exist, Create.
-        Table(f'channel_{message.channel.name}_{message.channel.id}', metadata,
+    parent = str(message.channel.parent) if "parent" in dir(message.channel) else None
+
+    table_name = f'{message.guild.name}_{parent or message.channel.name}'
+
+    if not engine.dialect.has_table(engine.connect(), table_name):  # If table don't exist, Create.
+        Table(table_name, metadata,
               Column('id', BigInteger, primary_key=True, nullable=False),
               Column('date', DateTime),
+              Column('guild', String),
+              Column('parent', String),
               Column('channel_id', String),
               Column('channel_name', String),
               Column('author_id', BigInteger),
@@ -66,13 +68,15 @@ async def on_message(message):
               )
         metadata.create_all()
 
-    tbl = metadata.tables[f'channel_{message.channel.name}_{message.channel.id}']
+    tbl = metadata.tables[table_name]
 
     attachments = [{'id': x.id, 'filename': x.filename, 'url': x.url} for x in list(message.attachments)]
 
     stmt = insert(tbl).values(
         id=message.id,
         date=datetime.now(),
+        guild=str(message.guild.name),
+        parent=parent,
         channel_id=message.channel.id,
         channel_name=message.channel.name,
         author_id=message.author.id,
