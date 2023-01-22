@@ -29,7 +29,9 @@ connection = engine.connect()
 metadata = MetaData()
 
 TOKEN = os.getenv('DISCORD_TOKEN')
-GUILDS = os.getenv('DISCORD_GUILD').split(',')
+GUILDS = os.getenv('DISCORD_GUILD', '').split(',')
+IGNORE_USERS = os.getenv('DISCORD_IGNORED_USERS', '').split(',')
+ALLOW_BOTS = os.getenv('DISCORD_ALLOW_BOTS', 'FALSE')
 
 intent = discord.Intents.default()
 intent.members = True
@@ -45,75 +47,78 @@ async def on_ready():
 
 @client.event
 async def on_message(message):
-    if message.guild.name in GUILDS:
+    print(message)
+    is_bot = message.author.bot
+    author_name = message.author.name
 
-        print(message)
+    if (not len(GUILDS) or message.guild.name in GUILDS) and (author_name not in IGNORE_USERS):
+        if not is_bot or (is_bot and ALLOW_BOTS == 'TRUE'):
 
-        metadata.reflect(connection)
+            metadata.reflect(connection)
 
-        is_forum = "parent" in dir(message.channel)
+            is_forum = "parent" in dir(message.channel)
 
-        parent = str(message.channel.parent) if is_forum else None
+            parent = str(message.channel.parent) if is_forum else None
 
-        table_name = f'{message.guild.name}_{parent or message.channel.name}'
+            table_name = f'{message.guild.name}_{parent or message.channel.name}'
 
-        if not connection.dialect.has_table(engine.connect(), table_name):  # If table don't exist, Create.
-            Table(table_name, metadata,
-                  Column('id', BigInteger, primary_key=True, nullable=False),
-                  Column('date', DateTime),
-                  Column('guild', String),
-                  Column('container', String),
-                  Column('parent_name', String),
-                  Column('channel_id', String),
-                  Column('channel_name', String),
-                  Column('author_id', BigInteger),
-                  Column('author_name', String),
-                  Column('author_discriminator', String),
-                  Column('author_nick', String),
-                  Column('message_content', String),
-                  Column('message_attachments', String),
-                  )
-            metadata.create_all(connection)
+            if not connection.dialect.has_table(engine.connect(), table_name):  # If table don't exist, Create.
+                Table(table_name, metadata,
+                      Column('id', BigInteger, primary_key=True, nullable=False),
+                      Column('date', DateTime),
+                      Column('guild', String),
+                      Column('container', String),
+                      Column('parent_name', String),
+                      Column('channel_id', String),
+                      Column('channel_name', String),
+                      Column('author_id', BigInteger),
+                      Column('author_name', String),
+                      Column('author_discriminator', String),
+                      Column('author_nick', String),
+                      Column('message_content', String),
+                      Column('message_attachments', String),
+                      )
+                metadata.create_all(connection)
 
-        tbl = metadata.tables[table_name]
+            tbl = metadata.tables[table_name]
 
-        attachments = [{'id': x.id, 'filename': x.filename, 'url': x.url} for x in list(message.attachments)]
+            attachments = [{'id': x.id, 'filename': x.filename, 'url': x.url} for x in list(message.attachments)]
 
-        stmt = insert(tbl).values(
-            id=message.id,
-            date=datetime.now(),
-            guild=str(message.guild.name),
-            container='Thread/Forum' if is_forum else 'channel',
-            parent_name=parent,
-            channel_id=message.channel.id,
-            channel_name=message.channel.name,
-            author_id=message.author.id,
-            author_name=message.author.name,
-            author_discriminator=message.author.discriminator,
-            author_nick=message.author.nick,
-            message_content=message.content,
-            message_attachments=json.dumps(attachments)
-        )
-        connection.execute(stmt)
+            stmt = insert(tbl).values(
+                id=message.id,
+                date=datetime.now(),
+                guild=str(message.guild.name),
+                container='Thread/Forum' if is_forum else 'channel',
+                parent_name=parent,
+                channel_id=message.channel.id,
+                channel_name=message.channel.name,
+                author_id=message.author.id,
+                author_name=message.author.name,
+                author_discriminator=message.author.discriminator,
+                author_nick=message.author.nick,
+                message_content=message.content,
+                message_attachments=json.dumps(attachments)
+            )
+            connection.execute(stmt)
 
-        if os.getenv('DOWNLOAD_ATTACHMENTS') == 'TRUE':
-            if len(attachments):
-                try:
-                    if is_forum:
-                        os.makedirs(uploads_path / table_name / f'{message.channel.name}')
-                    else:
-                        os.makedirs(uploads_path / table_name)
-                except OSError as error:
-                    if 'File exists' not in str(error):
-                        print(error)
+            if os.getenv('DOWNLOAD_ATTACHMENTS') == 'TRUE':
+                if len(attachments):
+                    try:
+                        if is_forum:
+                            os.makedirs(uploads_path / table_name / f'{message.channel.name}')
+                        else:
+                            os.makedirs(uploads_path / table_name)
+                    except OSError as error:
+                        if 'File exists' not in str(error):
+                            print(error)
 
-                for attachment in attachments:
-                    req = requests.get(attachment['url'], allow_redirects=True)
-                    if is_forum:
-                        filepath = uploads_path / f'{table_name}' / f'{message.channel.name}' / f'({attachment["id"]}){attachment["filename"]}'
-                    else:
-                        filepath = uploads_path / f'{table_name}' / f'({attachment["id"]}){attachment["filename"]}'
+                    for attachment in attachments:
+                        req = requests.get(attachment['url'], allow_redirects=True)
+                        if is_forum:
+                            filepath = uploads_path / f'{table_name}' / f'{message.channel.name}' / f'({attachment["id"]}){attachment["filename"]}'
+                        else:
+                            filepath = uploads_path / f'{table_name}' / f'({attachment["id"]}){attachment["filename"]}'
 
-                    open(filepath, 'wb').write(req.content)
+                        open(filepath, 'wb').write(req.content)
 
 client.run(TOKEN)
