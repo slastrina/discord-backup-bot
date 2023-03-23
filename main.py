@@ -18,6 +18,8 @@ load_dotenv()
 
 uploads_path = Path(os.getenv('ATTACHMENTS_PATH'))
 
+AUTHORIZED_USERS = ['HermesConrad#8650']
+
 if os.getenv('DOWNLOAD_ATTACHMENTS') == 'TRUE':
     try:
         os.makedirs(uploads_path)
@@ -39,6 +41,11 @@ intent.messages = True
 intent.message_content = True
 
 client = commands.Bot(command_prefix='!', intents = intent)
+
+def get_caller(ctx):
+    caller = f'{ctx.author.name}#{ctx.author.discriminator}'
+    print(caller)
+    return caller
 
 @client.event
 async def on_ready():
@@ -120,5 +127,33 @@ async def on_message(message):
                             filepath = uploads_path / f'{table_name}' / f'({attachment["id"]}){attachment["filename"]}'
 
                         open(filepath, 'wb').write(req.content)
+
+@client.command()
+async def announce(ctx):
+    caller = get_caller(ctx)
+    if caller in AUTHORIZED_USERS:
+        channel = discord.utils.get(ctx.guild.channels, name='general')
+        await channel.send('Hermes is present let the banter fly, the chat just got more lively, let the good times multiply!!!')
+    else:
+        await ctx.send(f"Junk")
+
+@client.command()
+async def goodbye(ctx):
+    caller = get_caller(ctx)
+    if caller in AUTHORIZED_USERS:
+        channel = discord.utils.get(ctx.guild.channels, name='general')
+        await channel.send("Aaaand he's gone to bed")
+    else:
+        await ctx.send(f"Junk")
+
+@client.command()
+async def ping(ctx):
+    caller = get_caller(ctx)
+    if caller in AUTHORIZED_USERS:
+        await ctx.send("Pong!")
+    elif caller == 'Digmac#8194':
+        await ctx.send("https://www.youtube.com/watch?v=RUaYbfKZIiA&t=25s")
+    else:
+        await ctx.send(f"Junk")
 
 client.run(TOKEN)
