@@ -18,7 +18,7 @@ load_dotenv()
 
 uploads_path = Path(os.getenv('ATTACHMENTS_PATH'))
 
-AUTHORIZED_USERS = ['HermesConrad#8650']
+AUTHORIZED_USERS = ['ExampleUser#8650']
 
 if os.getenv('DOWNLOAD_ATTACHMENTS') == 'TRUE':
     try:
